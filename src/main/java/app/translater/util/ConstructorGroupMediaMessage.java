@@ -1,6 +1,6 @@
-package app.translater.model;
+package app.translater.util;
 
-import app.translater.util.DeeplFormatter;
+import app.translater.model.MediaGroupData;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

@@ -1,13 +1,12 @@
 package app.bot.controller;
 
 import app.bot.config.BotConfig;
-import app.bot.data.ChatIdMessageSender;
 import app.translater.bundle.model.Bundle;
 import app.translater.bundle.redis.BundleRedisDao;
 import app.translater.groupInfo.Header;
 import app.translater.bundle.BundleController;
-import app.translater.model.ConstructorGroupMediaMessage;
-import app.translater.model.ConstructorPlainTextMsg;
+import app.translater.util.ConstructorGroupMediaMessage;
+import app.translater.util.ConstructorPlainTextMsg;
 import app.translater.model.MediaGroupData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -26,20 +25,10 @@ import java.util.*;
 @Controller
 public class ChatController extends TelegramLongPollingBot {
     @Autowired
-    private ChatIdMessageSender sendChatId;
-    @Autowired
-    private BundleController manager;
-    @Autowired
-    private BundleRedisDao bundleRedisDao;
-    @Autowired
     private BotConfig botConfig;
-    @Autowired
-    private ConstructorPlainTextMsg plainMsg;
-    @Autowired
-    private ConstructorGroupMediaMessage groupMsg;
 
-    private final HashMap<String, MediaGroupData> mediaGroupMsgUpdateCollector = new HashMap<>();
-    private final HashMap<String, Integer> callMap = new HashMap<>();
+
+
 
     @Override
     public String getBotUsername() {
@@ -51,35 +40,164 @@ public class ChatController extends TelegramLongPollingBot {
         return botConfig.getBotToken();
     }
 
-    public Long getSuperUserChatId() {
-        return botConfig.getSuperUserChatId();
+    @Autowired
+    private BundleController bundleController;
+    @Autowired
+    private BundleRedisDao dao;
+    @Autowired
+    private ConstructorPlainTextMsg plainTextMsg;
+    @Autowired
+    private ConstructorGroupMediaMessage groupMediaMessage;
+    
+    private final HashMap<String, MediaGroupData> groupsMessages = new HashMap<>();
+    @Override
+    public void onUpdateReceived(Update update) {
+        if (bundleController.handleUpdate(update)) return;
+        forwardTranslatedMsg(update);
     }
 
     @Scheduled(fixedRate = 2000)
-    public void getUpdate() {
+    public void sendGroupMessage() {
         List<String> idList = new ArrayList<>();
 
-        for (Map.Entry<String, MediaGroupData> data : mediaGroupMsgUpdateCollector.entrySet()) {
+        for (Map.Entry<String, MediaGroupData> data : groupsMessages.entrySet()) {
             String id = data.getKey();
             LocalDateTime plusTime = data.getValue().getLastUpdate().plusSeconds(5);
             LocalDateTime now = LocalDateTime.now();
 
             if (now.isAfter(plusTime)) {
-                sendGroupMediaMsg(groupMsg.getMediaGroupMessage(data.getValue()));
+                sendGroupMediaMsg(groupMediaMessage.getMediaGroupMessage(data.getValue()));
                 idList.add(id);
             }
         }
 
         for (String id : idList) {
-            mediaGroupMsgUpdateCollector.remove(id);
+            groupsMessages.remove(id);
         }
         idList.clear();
     }
 
-    @Override
-    public void onUpdateReceived(Update update) {
-        if (manager.handleUpdate(update)) return;
-        forwardTranslatedMsg(update);
+    public void forwardTranslatedMsg(Update update) {
+        Long from = update.getMessage().getChat().getId();
+        Bundle bundle = dao.getBundle(BundleRedisDao.KEY.concat(String.valueOf(from))).get();
+
+        String key = bundle.getKey();
+        Long chatIdToSendMsg = bundle.getTo();
+        String direction = bundle.getLang();
+        String head = bundle.getFlag().concat(Header.createHead(update));
+
+        if (update.hasMessage() && update.getMessage().hasText() && update.getMessage().getEntities() == null) {
+
+            sendMessage(plainTextMsg.translatePlainText(key, chatIdToSendMsg, update, direction, head));
+            return;
+        }
+
+        if (update.hasMessage() && update.getMessage().hasText() && update.getMessage().getEntities() != null) {
+            sendMessage(plainTextMsg.translateTextWithEntities(key, chatIdToSendMsg, update,
+                    direction, head));
+            return;
+        }
+
+        if (update.hasMessage() && update.getMessage().hasPhoto() && update.getMessage().getMediaGroupId() == null) {
+            sendPhotoMsg(groupMediaMessage
+                    .getMsgWithOnePhotoAndCaption(key, chatIdToSendMsg, update, direction, head));
+            return;
+        }
+
+        if (update.hasMessage() && update.getMessage().hasDocument() && update.getMessage().getMediaGroupId() == null) {
+            sendDocumentMsg(groupMediaMessage
+                    .getMsgWithOneDocumentAndCaption(key, chatIdToSendMsg, update, direction, head));
+            return;
+        }
+
+        if (update.hasMessage() && update.getMessage().hasAudio() && update.getMessage().getMediaGroupId() == null) {
+            sendAudioMsg(groupMediaMessage
+                    .getMsgWithOneAudioAndCaption(key, chatIdToSendMsg, update, direction, head));
+            return;
+        }
+
+        if (update.hasMessage() && update.getMessage().hasVideo() && update.getMessage().getMediaGroupId() == null) {
+            sendVideoMsg(groupMediaMessage
+                    .getMsgWithOneVideoAndCaption(key, chatIdToSendMsg, update, direction, head));
+            return;
+        }
+
+        try {
+
+            if (update.hasMessage() && update.getMessage().hasPhoto()
+                    || update.getMessage().hasVideo() || update.getMessage().hasDocument() || update.getMessage().hasAudio()
+                    && update.getMessage().getMediaGroupId() != null) {
+
+                createMediaGroupData(update, head, chatIdToSendMsg, direction, key);
+            }
+        } catch (Exception ee) {
+            ee.printStackTrace();
+        }
+    }
+
+    private void createMediaGroupData(Update update, String head,
+                                      Long chatIdToSendMsg, String direction, String key) {
+        String id = update.getMessage().getMediaGroupId();
+
+        if (!groupsMessages.containsKey(id)) {
+            groupsMessages.put(id, new MediaGroupData());
+            groupsMessages.get(id).setChatIdToSendMsg(chatIdToSendMsg);
+            groupsMessages.get(id).setDirection(direction);
+            groupsMessages.get(id).setHead(head);
+            groupsMessages.get(id).setDeeplKey(key);
+        }
+
+        if (update.getMessage().hasPhoto()) {
+            groupsMessages.get(id).getListPhotoFilesId().add(update.getMessage().getPhoto().get(0).getFileId());
+        }
+
+        if (update.getMessage().hasVideo()) {
+            groupsMessages.get(id).getListVideoFilesId().add(update.getMessage().getVideo().getFileId());
+        }
+
+        if (update.getMessage().hasAudio()) {
+            groupsMessages.get(id).getListAudioFilesId().add(update.getMessage().getAudio().getFileId());
+        }
+
+        if (update.getMessage().hasDocument()) {
+            groupsMessages.get(id).getListDocumentsFilesId().add(update.getMessage().getDocument().getFileId());
+        }
+
+        if (update.getMessage().getCaption() != null) {
+            groupsMessages.get(id).setCaption(update.getMessage().getCaption());
+            if (update.getMessage().getCaptionEntities() != null) {
+                groupsMessages.get(id).setEntities(update.getMessage().getCaptionEntities());
+            }
+        }
+
+        groupsMessages.get(id).setLastUpdate(LocalDateTime.now());
+    }
+
+    public List<String> splitString(String originalText, int maxLength) {
+        List<String> parts = new ArrayList<>();
+        int length = Math.min(originalText.length(), maxLength);
+        String part1 = originalText.substring(0, length);
+        String part2 = originalText.substring(length);
+        int newLineIndex = part2.indexOf("\n");
+        int spaceIndex = part2.indexOf(" ", maxLength);
+        if (newLineIndex >= 0 && newLineIndex <= 1.3 * length) {
+            parts.add(part1 + part2.substring(0, newLineIndex + 1));
+            parts.add(part2.substring(newLineIndex + 1));
+        } else if (spaceIndex >= 0) {
+            parts.add(part1 + part2.substring(0, spaceIndex + 1));
+            parts.add(part2.substring(spaceIndex + 1));
+        } else {
+            parts.add(part1);
+            parts.add(part2);
+        }
+        return parts;
+    }
+
+    public String removeHtmlTags(String input) {
+        if (input == null) {
+            return "-";
+        }
+        return input.replaceAll("<[^>]+>", "");
     }
 
     private void sendGroupMediaMsg(SendMediaGroup mainMsg) {
@@ -140,128 +258,6 @@ public class ChatController extends TelegramLongPollingBot {
         } catch (Exception e) {
 
         }
-    }
-
-    public void forwardTranslatedMsg(Update update) {
-        Long from = update.getMessage().getChat().getId();
-        Bundle bundle = bundleRedisDao.getBundle(BundleRedisDao.KEY.concat(String.valueOf(from))).get();
-
-        String key = bundle.getKey();
-        Long chatIdToSendMsg = bundle.getTo();
-        String direction = bundle.getLang();
-        String head = bundle.getFlag().concat(Header.createHead(update));
-
-        if (update.hasMessage() && update.getMessage().hasText() && update.getMessage().getEntities() == null) {
-
-            sendMessage(plainMsg.translatePlainText(key, chatIdToSendMsg, update, direction, head));
-            return;
-        }
-
-        if (update.hasMessage() && update.getMessage().hasText() && update.getMessage().getEntities() != null) {
-            sendMessage(plainMsg.translateTextWithEntities(key, chatIdToSendMsg, update,
-                    direction, head));
-            return;
-        }
-
-        if (update.hasMessage() && update.getMessage().hasPhoto() && update.getMessage().getMediaGroupId() == null) {
-            sendPhotoMsg(groupMsg
-                    .getMsgWithOnePhotoAndCaption(key, chatIdToSendMsg, update, direction, head));
-            return;
-        }
-
-        if (update.hasMessage() && update.getMessage().hasDocument() && update.getMessage().getMediaGroupId() == null) {
-            sendDocumentMsg(groupMsg
-                    .getMsgWithOneDocumentAndCaption(key, chatIdToSendMsg, update, direction, head));
-            return;
-        }
-
-        if (update.hasMessage() && update.getMessage().hasAudio() && update.getMessage().getMediaGroupId() == null) {
-            sendAudioMsg(groupMsg
-                    .getMsgWithOneAudioAndCaption(key, chatIdToSendMsg, update, direction, head));
-            return;
-        }
-
-        if (update.hasMessage() && update.getMessage().hasVideo() && update.getMessage().getMediaGroupId() == null) {
-            sendVideoMsg(groupMsg
-                    .getMsgWithOneVideoAndCaption(key, chatIdToSendMsg, update, direction, head));
-            return;
-        }
-
-        try {
-
-            if (update.hasMessage() && update.getMessage().hasPhoto()
-                    || update.getMessage().hasVideo() || update.getMessage().hasDocument() || update.getMessage().hasAudio()
-                    && update.getMessage().getMediaGroupId() != null) {
-
-                createMediaGroupData(update, head, chatIdToSendMsg, direction, key);
-            }
-        } catch (Exception ee) {
-            ee.printStackTrace();
-        }
-    }
-
-    private void createMediaGroupData(Update update, String head, Long chatIdToSendMsg, String direction, String key) {
-        String id = update.getMessage().getMediaGroupId();
-
-        if (!mediaGroupMsgUpdateCollector.containsKey(id)) {
-            mediaGroupMsgUpdateCollector.put(id, new MediaGroupData());
-            mediaGroupMsgUpdateCollector.get(id).setChatIdToSendMsg(chatIdToSendMsg);
-            mediaGroupMsgUpdateCollector.get(id).setDirection(direction);
-            mediaGroupMsgUpdateCollector.get(id).setHead(head);
-            mediaGroupMsgUpdateCollector.get(id).setDeeplKey(key);
-        }
-
-        if (update.getMessage().hasPhoto()) {
-            mediaGroupMsgUpdateCollector.get(id).getListPhotoFilesId().add(update.getMessage().getPhoto().get(0).getFileId());
-        }
-
-        if (update.getMessage().hasVideo()) {
-            mediaGroupMsgUpdateCollector.get(id).getListVideoFilesId().add(update.getMessage().getVideo().getFileId());
-        }
-
-        if (update.getMessage().hasAudio()) {
-            mediaGroupMsgUpdateCollector.get(id).getListAudioFilesId().add(update.getMessage().getAudio().getFileId());
-        }
-
-        if (update.getMessage().hasDocument()) {
-            mediaGroupMsgUpdateCollector.get(id).getListDocumentsFilesId().add(update.getMessage().getDocument().getFileId());
-        }
-
-        if (update.getMessage().getCaption() != null) {
-            mediaGroupMsgUpdateCollector.get(id).setCaption(update.getMessage().getCaption());
-            if (update.getMessage().getCaptionEntities() != null) {
-                mediaGroupMsgUpdateCollector.get(id).setEntities(update.getMessage().getCaptionEntities());
-            }
-        }
-
-        mediaGroupMsgUpdateCollector.get(id).setLastUpdate(LocalDateTime.now());
-    }
-
-    public List<String> splitString(String originalText, int maxLength) {
-        List<String> parts = new ArrayList<>();
-        int length = Math.min(originalText.length(), maxLength);
-        String part1 = originalText.substring(0, length);
-        String part2 = originalText.substring(length);
-        int newLineIndex = part2.indexOf("\n");
-        int spaceIndex = part2.indexOf(" ", maxLength);
-        if (newLineIndex >= 0 && newLineIndex <= 1.3 * length) {
-            parts.add(part1 + part2.substring(0, newLineIndex + 1));
-            parts.add(part2.substring(newLineIndex + 1));
-        } else if (spaceIndex >= 0) {
-            parts.add(part1 + part2.substring(0, spaceIndex + 1));
-            parts.add(part2.substring(spaceIndex + 1));
-        } else {
-            parts.add(part1);
-            parts.add(part2);
-        }
-        return parts;
-    }
-
-    public String removeHtmlTags(String input) {
-        if (input == null) {
-            return "-";
-        }
-        return input.replaceAll("<[^>]+>", "");
     }
 
     private void sendMessage(SendMessage mainMsg) {

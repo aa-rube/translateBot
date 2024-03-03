@@ -12,7 +12,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import java.util.ArrayList;
 import java.util.List;
 
-public class Messages {
+public class BotContentData {
     public static Object getSendMessage(Long chatId, String text, InlineKeyboardMarkup markup) {
         SendMessage msg = new SendMessage();
         msg.setChatId(chatId);

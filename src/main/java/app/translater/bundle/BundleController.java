@@ -1,7 +1,7 @@
 package app.translater.bundle;
 
 import app.bot.config.BotConfig;
-import app.bot.data.Messages;
+import app.bot.data.BotContentData;
 import app.bot.util.MessageExecutor;
 import app.translater.bundle.model.Bundle;
 import app.translater.bundle.redis.BundleRedisDao;
@@ -55,7 +55,7 @@ public class BundleController {
         }
 
         if (update.hasCallbackQuery()) {
-            executor.sendCallBackAnswer(Messages.getCallbackQueryAnswer(update));
+            executor.sendCallBackAnswer(BotContentData.getCallbackQueryAnswer(update));
             return handleCallbackQuery(update);
         }
 
@@ -68,7 +68,7 @@ public class BundleController {
 
         if (text.equals("/start")) {
             if (bundleRedisDao.getAllBundles().isEmpty()) {
-                executor.sendMessage(Messages.getSendMessage(chatId,
+                executor.sendMessage(BotContentData.getSendMessage(chatId,
                         "Кажется ни одной связки не создано!\nНачни прямо сейчас!",
                         keyboard.create()));
                 return true;
@@ -104,7 +104,7 @@ public class BundleController {
 
         if (data.equals("BACK")) {
 
-            executor.editMessage(Messages.getEditMessage(getAdminChatId(),
+            executor.editMessage(BotContentData.getEditMessage(getAdminChatId(),
                     "Выберите связку, которую хотите редактировать.\nСвязка названа по группе назначения",
                     keyboard.getBundles(bundleRedisDao.getAllBundles()), msgId));
             return true;
@@ -114,7 +114,7 @@ public class BundleController {
             sourceGroupUpdate = true;
             commonMsgId = msgId;
 
-            executor.editMessage(Messages.getEditMessage(chatId,
+            executor.editMessage(BotContentData.getEditMessage(chatId,
                     "Создание новой связки!\nДавай назначим группу перевода",
                     keyboard.addBotToGroup(getBotUserName(), "Добавить в группу перевода"),
                     msgId));
@@ -124,7 +124,7 @@ public class BundleController {
         if (data.contains("lang=") && bundle != null) {
             bundle.setLang(data.split("=")[1]);
 
-            executor.editMessage(Messages.getEditMessage(getAdminChatId(),
+            executor.editMessage(BotContentData.getEditMessage(getAdminChatId(),
                     "Готово! Связка " + bundle.getNameTo() + " сохранена!",
                     null, msgId));
 
@@ -144,7 +144,7 @@ public class BundleController {
             Optional<Bundle> optionalBundle = bundleRedisDao.getBundle(data);
 
             if (optionalBundle.isEmpty()) {
-                executor.editMessage(Messages.getEditMessage(chatId,
+                executor.editMessage(BotContentData.getEditMessage(chatId,
                         "Что-то пошло не так, сформируйте сообщение со связками заново нажав /start",
                         null, msgId));
                 return true;
@@ -168,18 +168,18 @@ public class BundleController {
                 .append("API Deepl: ").append(foundBundle.getKey());
 
         if (msgId == -1) {
-            executor.sendMessage(Messages.getSendMessage(getAdminChatId(), builder.toString(),
+            executor.sendMessage(BotContentData.getSendMessage(getAdminChatId(), builder.toString(),
                     keyboard.editBundle(builder.toString(), data)));
             return true;
         }
 
-        executor.editMessage(Messages.getEditMessage(getAdminChatId(), builder.toString(),
+        executor.editMessage(BotContentData.getEditMessage(getAdminChatId(), builder.toString(),
                 keyboard.editBundle(builder.toString(), data), msgId));
         return true;
     }
 
     private boolean showBundleSelectionMenu() {
-        executor.sendMessage(Messages.getSendMessage(getAdminChatId(),
+        executor.sendMessage(BotContentData.getSendMessage(getAdminChatId(),
                 "Выберите связку, которую хотите редактировать.\nСвязка названа по группе назначения",
                 keyboard.getBundles(bundleRedisDao.getAllBundles())));
         return true;
@@ -203,11 +203,11 @@ public class BundleController {
         bundle.setFrom(update.getMessage().getChat().getId());
         bundle.setNameFrom(update.getMessage().getChat().getTitle());
 
-        executor.sendMessage(Messages.getSendMessage(bundle.getFrom(),
+        executor.sendMessage(BotContentData.getSendMessage(bundle.getFrom(),
                 "Группа перевода добавлена и записана!",
                 null));
 
-        executor.editMessage(Messages.getEditMessage(getAdminChatId(),
+        executor.editMessage(BotContentData.getEditMessage(getAdminChatId(),
                 "Группа перевода добавлена и записана!\n\nТеперь добавим в целевую группу назначения",
                 keyboard.addBotToGroup(getBotUserName(), "Добавить в группу назначения"), commonMsgId));
         return true;
@@ -224,11 +224,11 @@ public class BundleController {
         bundle.setKey("");
         bundle.setFlag("");
 
-        executor.sendMessage(Messages.getSendMessage(bundle.getTo(),
+        executor.sendMessage(BotContentData.getSendMessage(bundle.getTo(),
                 "Группа назначения добавлена и записана!",
                 null));
 
-        executor.editMessage(Messages.getEditMessage(getAdminChatId(),
+        executor.editMessage(BotContentData.getEditMessage(getAdminChatId(),
                 "Бот добавлен в целевую группу, информация записана!\nТеперь выбери язык, на который будем переводить",
                 keyboard.languages(), commonMsgId));
         bundleRedisDao.saveBundle(bundle);

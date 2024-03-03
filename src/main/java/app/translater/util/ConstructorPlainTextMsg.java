@@ -1,4 +1,4 @@
-package app.translater.model;
+package app.translater.util;
 
 import app.translater.util.DeeplFormatter;
 import org.springframework.beans.factory.annotation.Autowired;

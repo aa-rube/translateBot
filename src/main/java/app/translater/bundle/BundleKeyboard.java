@@ -1,6 +1,6 @@
 package app.translater.bundle;
 
-import app.bot.data.Messages;
+import app.bot.data.BotContentData;
 import app.translater.bundle.model.Bundle;
 import app.translater.bundle.redis.BundleRedisDao;
 import org.springframework.stereotype.Service;
@@ -18,7 +18,7 @@ public class BundleKeyboard {
     public InlineKeyboardMarkup create() {
         String[] buttonTexts = {"Создать связку"};
         String[] callBackData = {"CREATE"};
-        return Messages.createInlineKeyboardLine(buttonTexts, callBackData);
+        return BotContentData.createInlineKeyboardLine(buttonTexts, callBackData);
     }
 
     public InlineKeyboardMarkup addBotToGroup(String botUserName, String buttonText) {
@@ -54,7 +54,7 @@ public class BundleKeyboard {
     public InlineKeyboardMarkup languages() {
         String[] buttonTexts = {"Spanish", "Italian", "Portuguese", "Ukrainian", "English"};
         String[] callBackData = {"lang=ES", "lang=IT", "lang=PT-PT", "lang=UK", "lang=EN-US"};
-        return Messages.createVerticalInlineKeyboard(buttonTexts, callBackData);
+        return BotContentData.createVerticalInlineKeyboard(buttonTexts, callBackData);
     }
 
     public InlineKeyboardMarkup editBundle(String text, String data) {
