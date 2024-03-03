@@ -1,4 +1,4 @@
-package app.translater.bundle.redis;
+package app.translater.bundle.dao;
 
 import app.translater.bundle.model.Bundle;
 import org.springframework.stereotype.Service;

@@ -1,8 +1,8 @@
 package app.bot.controller;
 
 import app.bot.config.BotConfig;
+import app.translater.bundle.dao.BundleRedisDao;
 import app.translater.bundle.model.Bundle;
-import app.translater.bundle.redis.BundleRedisDao;
 import app.translater.groupInfo.Header;
 import app.translater.bundle.BundleController;
 import app.translater.util.ConstructorGroupMediaMessage;
@@ -26,20 +26,19 @@ import java.util.*;
 public class ChatController extends TelegramLongPollingBot {
     @Autowired
     private BotConfig botConfig;
-
-
-
-
     @Override
     public String getBotUsername() {
         return botConfig.getBotUsername();
     }
-
     @Override
     public String getBotToken() {
         return botConfig.getBotToken();
     }
-
+    @Override
+    public void onUpdateReceived(Update update) {
+        if (bundleController.handleUpdate(update)) return;
+        forwardTranslatedMsg(update);
+    }
     @Autowired
     private BundleController bundleController;
     @Autowired
@@ -48,14 +47,7 @@ public class ChatController extends TelegramLongPollingBot {
     private ConstructorPlainTextMsg plainTextMsg;
     @Autowired
     private ConstructorGroupMediaMessage groupMediaMessage;
-    
     private final HashMap<String, MediaGroupData> groupsMessages = new HashMap<>();
-    @Override
-    public void onUpdateReceived(Update update) {
-        if (bundleController.handleUpdate(update)) return;
-        forwardTranslatedMsg(update);
-    }
-
     @Scheduled(fixedRate = 2000)
     public void sendGroupMessage() {
         List<String> idList = new ArrayList<>();

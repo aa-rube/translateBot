@@ -1,8 +1,8 @@
-package app.translater.bundle;
+package app.translater.bundle.data;
 
 import app.bot.data.BotContentData;
 import app.translater.bundle.model.Bundle;
-import app.translater.bundle.redis.BundleRedisDao;
+import app.translater.bundle.dao.BundleRedisDao;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
