@@ -1,15 +1,16 @@
-package app.bot.service;
+package app.translater.util;
 
-import app.translator.DeeplTranslator;
+
+import app.deepl.DeeplTranslator;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.MessageEntity;
 
 import java.util.Comparator;
 import java.util.List;
 
-@Component
-public class Formatter {
+@Service
+public class DeeplFormatter {
     @Autowired
     private DeeplTranslator deepl;
 
