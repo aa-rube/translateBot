@@ -26,7 +26,7 @@ public class BundleController {
     private BundleKeyboard keyboard;
     private final StringBuilder builder = new StringBuilder();
     private Bundle bundle = new Bundle();
-    private Boolean sourceGroupUpdate;
+    private Boolean sourceUpdate;
     private Integer commonMsgId;
 
     private Long getAdminChatId() {
@@ -38,14 +38,34 @@ public class BundleController {
     }
 
     public boolean handleUpdate(Update update) {
-        if (update.getMessage() != null && update.getMessage().getNewChatMembers() != null
-                && update.getMessage().getText() == null && update.getMessage().getLeftChatMember() == null) {
 
-            if (sourceGroupUpdate != null) {
-                if (sourceGroupUpdate) {
-                    return addSourceGroup(update);
+        if (!update.hasMessage()
+                && update.getMyChatMember() != null
+                && update.getMyChatMember().getNewChatMember() != null
+                && update.getMyChatMember().getOldChatMember() != null
+                && update.getMyChatMember().getNewChatMember() != null
+
+                && !update.getMyChatMember().getOldChatMember().getStatus().equals("administrator")
+                && update.getMyChatMember().getNewChatMember().getStatus().equals("administrator")
+                && update.getMyChatMember().getNewChatMember().getUser().getUserName().equals(getBotUserName())
+                && update.getMyChatMember().getChat().getType().equals("channel")
+                && !sourceUpdate) {
+
+            return addTargetChannel(update);
+        }
+
+
+        if (update.getMessage() != null
+                && update.getMessage().getNewChatMembers() != null
+                && update.getMessage().getText() == null
+                && update.getMessage().getLeftChatMember() == null) {
+
+
+            if (sourceUpdate != null) {
+                if (sourceUpdate) {
+                    return addSourceChat(update);
                 } else {
-                    return addTargetGroup(update);
+                    return addTargetChat(update);
                 }
             }
         }
@@ -80,11 +100,11 @@ public class BundleController {
 
         if (text.equals("/start@".concat(getBotUserName()).concat(" true"))) {
 
-            if (sourceGroupUpdate != null) {
-                if (sourceGroupUpdate) {
-                    return addSourceGroup(update);
+            if (sourceUpdate != null) {
+                if (sourceUpdate) {
+                    return addSourceChat(update);
                 } else {
-                    return addTargetGroup(update);
+                    return addTargetChat(update);
                 }
             }
 
@@ -112,12 +132,12 @@ public class BundleController {
         }
 
         if (data.equals("CREATE")) {
-            sourceGroupUpdate = true;
+            sourceUpdate = true;
             commonMsgId = msgId;
 
             executor.editMessage(BotContentData.getEditMessage(chatId,
-                    "Создание новой связки!\nДавай назначим группу перевода",
-                    keyboard.addBotToGroup(getBotUserName(), "Добавить в группу перевода"),
+                    "Создание новой связки!\nДавай назначим группу/тему для новых сообщений, для перевода (ОТКУДА)",
+                    keyboard.addBotToSourceChatOrChannel(getBotUserName()),
                     msgId));
             return true;
         }
@@ -138,7 +158,7 @@ public class BundleController {
 
         if (data.startsWith("DELETE_")) {
             bundleRedisDao.deleteBundle(data.split("_")[1]);
-           return showBundleSelectionMenu();
+            return showBundleSelectionMenu();
         }
 
         if (data.contains(BundleRedisDao.KEY)) {
@@ -198,8 +218,8 @@ public class BundleController {
         return new String[]{key, from, to, lang, flag, api};
     }
 
-    private boolean addSourceGroup(Update update) {
-        sourceGroupUpdate = false;
+    private boolean addSourceChat(Update update) {
+        sourceUpdate = false;
 
         bundle.setFrom(update.getMessage().getChat().getId());
         bundle.setNameFrom(update.getMessage().getChat().getTitle());
@@ -209,14 +229,16 @@ public class BundleController {
                 null));
 
         executor.editMessage(BotContentData.getEditMessage(getAdminChatId(),
-                "Группа перевода добавлена и записана!\n\nТеперь добавим в целевую группу назначения",
-                keyboard.addBotToGroup(getBotUserName(), "Добавить в группу назначения"), commonMsgId));
+                "Группа перевода добавлена и записана!\n\nТеперь добаим целевую группу - канал для переведенных сообщений(КУДА)",
+
+                keyboard.addBotToTargetChatOrChannel(getBotUserName()), commonMsgId));
         return true;
 
     }
 
-    private boolean addTargetGroup(Update update) {
-        sourceGroupUpdate = null;
+
+    private boolean addTargetChat(Update update) {
+        sourceUpdate = null;
 
         bundle.setTo(update.getMessage().getChat().getId());
         bundle.setNameTo(update.getMessage().getChat().getTitle());
@@ -233,6 +255,34 @@ public class BundleController {
                 "Бот добавлен в целевую группу, информация записана!\nТеперь выбери язык, на который будем переводить",
                 keyboard.languages(), commonMsgId));
         bundleRedisDao.saveBundle(bundle);
+        return true;
+    }
+
+
+    private boolean addTargetChannel(Update update) {
+        sourceUpdate = null;
+
+//        System.out.println(update.getMyChatMember().getNewChatMember().getStatus());
+//        System.out.println(update.getMyChatMember().getNewChatMember().getUser().getFirstName());
+//        System.out.println("update:" + update.getMyChatMember().getChat().getType());
+//        System.out.println("update:" + update.getMyChatMember().getChat().getTitle());
+//        System.out.println("update:" + update.getMyChatMember().getChat().getId());
+
+        bundle.setTo(update.getMyChatMember().getChat().getId());
+        bundle.setNameTo(update.getMyChatMember().getChat().getTitle());
+
+        bundle.setLang("");
+        bundle.setKey("");
+        bundle.setFlag("");
+        bundleRedisDao.saveBundle(bundle);
+
+        executor.sendMessage(BotContentData.getSendMessage(bundle.getTo(),
+                "Канал назначения добавлен и записан!",
+                null));
+
+        executor.editMessage(BotContentData.getEditMessage(getAdminChatId(),
+                "Бот добавлен в целевой канал, информация записана!\nТеперь выбери язык, на который будем переводить",
+                keyboard.languages(), commonMsgId));
         return true;
     }
 

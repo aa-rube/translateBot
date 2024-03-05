@@ -26,19 +26,26 @@ import java.util.*;
 public class ChatController extends TelegramLongPollingBot {
     @Autowired
     private BotConfig botConfig;
+
     @Override
     public String getBotUsername() {
         return botConfig.getBotUsername();
     }
+
     @Override
     public String getBotToken() {
         return botConfig.getBotToken();
     }
+
     @Override
     public void onUpdateReceived(Update update) {
         if (bundleController.handleUpdate(update)) return;
+        if (!update.hasMessage()) return;
+
+
         forwardTranslatedMsg(update);
     }
+
     @Autowired
     private BundleController bundleController;
     @Autowired
@@ -48,6 +55,7 @@ public class ChatController extends TelegramLongPollingBot {
     @Autowired
     private ConstructorGroupMediaMessage groupMediaMessage;
     private final HashMap<String, MediaGroupData> groupsMessages = new HashMap<>();
+
     @Scheduled(fixedRate = 2000)
     public void sendGroupMessage() {
         List<String> idList = new ArrayList<>();

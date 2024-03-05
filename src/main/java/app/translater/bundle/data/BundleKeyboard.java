@@ -21,12 +21,27 @@ public class BundleKeyboard {
         return BotContentData.createInlineKeyboardLine(buttonTexts, callBackData);
     }
 
-    public InlineKeyboardMarkup addBotToGroup(String botUserName, String buttonText) {
+    public InlineKeyboardMarkup addBotToSourceChatOrChannel(String botUserName) {
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         InlineKeyboardButton inlineButton = new InlineKeyboardButton();
-        inlineButton.setText(buttonText);
+        inlineButton.setText("Добавить в группу перевода");
         inlineButton.setUrl("tg://resolve?domain=".concat(botUserName).concat("&startgroup=true"));
         markupInline.setKeyboard(List.of(List.of(inlineButton)));
+        return markupInline;
+    }
+
+    public InlineKeyboardMarkup addBotToTargetChatOrChannel(String botUserName) {
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+
+        InlineKeyboardButton addToChat = new InlineKeyboardButton();
+        addToChat.setText("Добавить в целевую группу");
+        addToChat.setUrl("tg://resolve?domain=".concat(botUserName).concat("&startgroup=true"));
+        markupInline.setKeyboard(List.of(List.of(addToChat)));
+
+        InlineKeyboardButton addToChannel = new InlineKeyboardButton();
+        addToChannel.setText("Добавить в кана целевой канал");
+        addToChannel.setUrl("tg://resolve?domain=".concat(botUserName).concat("&startchannel=true"));
+        markupInline.setKeyboard(List.of(List.of(addToChannel)));
         return markupInline;
     }
 
