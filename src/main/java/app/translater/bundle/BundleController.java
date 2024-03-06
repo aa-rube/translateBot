@@ -44,7 +44,6 @@ public class BundleController {
                 && update.getMyChatMember().getNewChatMember() != null
                 && update.getMyChatMember().getOldChatMember() != null
                 && update.getMyChatMember().getNewChatMember() != null
-
                 && !update.getMyChatMember().getOldChatMember().getStatus().equals("administrator")
                 && update.getMyChatMember().getNewChatMember().getStatus().equals("administrator")
                 && update.getMyChatMember().getNewChatMember().getUser().getUserName().equals(getBotUserName())
@@ -55,7 +54,7 @@ public class BundleController {
         }
 
 
-        if (update.getMessage() != null
+        if (update.hasMessage()
                 && update.getMessage().getNewChatMembers() != null
                 && update.getMessage().getText() == null
                 && update.getMessage().getLeftChatMember() == null) {
