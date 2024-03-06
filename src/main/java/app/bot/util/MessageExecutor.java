@@ -21,16 +21,17 @@ public class MessageExecutor {
     public void sendMessage(Object msg) {
         try {
             chat.executeAsync((SendMessage) msg);
-        } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
+            System.out.println("wtf");
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
     public void editMessage(Object msg) {
         try {
             chat.executeAsync((EditMessageText) msg);
-        } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

@@ -39,44 +39,43 @@ public class BundleController {
 
     public boolean handleUpdate(Update update) {
 
-        if (!update.hasMessage()
-                && update.getMyChatMember() != null
-                && update.getMyChatMember().getNewChatMember() != null
-                && update.getMyChatMember().getOldChatMember() != null
-                && update.getMyChatMember().getNewChatMember() != null
-                && !update.getMyChatMember().getOldChatMember().getStatus().equals("administrator")
-                && update.getMyChatMember().getNewChatMember().getStatus().equals("administrator")
-                && update.getMyChatMember().getNewChatMember().getUser().getUserName().equals(getBotUserName())
-                && update.getMyChatMember().getChat().getType().equals("channel")
-                && !sourceUpdate) {
+        try {
+            update.getMyChatMember().getChat().getType();
+            if (update.getMyChatMember().getNewChatMember().getStatus().equals("administrator")
+                    && update.getMyChatMember().getNewChatMember().getUser().getUserName().equals(getBotUserName())
+                    && !sourceUpdate){
+                return addTargetChannel(update);
+            }
 
-            return addTargetChannel(update);
-        }
+        } catch (Exception e) {
+            System.out.println(1);
 
+            if (update.hasMessage()
+                    && update.getMessage().getNewChatMembers() != null
+                    && update.getMessage().getText() == null
+                    && update.getMessage().getLeftChatMember() == null) {
 
-        if (update.hasMessage()
-                && update.getMessage().getNewChatMembers() != null
-                && update.getMessage().getText() == null
-                && update.getMessage().getLeftChatMember() == null) {
+                System.out.println(2);
 
-
-            if (sourceUpdate != null) {
-                if (sourceUpdate) {
-                    return addSourceChat(update);
-                } else {
-                    return addTargetChat(update);
+                if (sourceUpdate != null) {
+                    if (sourceUpdate) {
+                        return addSourceChat(update);
+                    } else {
+                        return addTargetChat(update);
+                    }
                 }
             }
-        }
 
-        if (update.getMessage() != null && update.getMessage().hasText()
-                && update.getMessage().getFrom().getId().equals(getAdminChatId())) {
-            return handleTextMessage(update);
-        }
+            if (update.getMessage() != null && update.getMessage().hasText()
+                    && update.getMessage().getFrom().getId().equals(getAdminChatId())) {
+                return handleTextMessage(update);
+            }
 
-        if (update.hasCallbackQuery()) {
-            executor.sendCallBackAnswer(BotContentData.getCallbackQueryAnswer(update));
-            return handleCallbackQuery(update);
+            if (update.hasCallbackQuery()) {
+                executor.sendCallBackAnswer(BotContentData.getCallbackQueryAnswer(update));
+                return handleCallbackQuery(update);
+            }
+
         }
 
         return false;
@@ -149,7 +148,7 @@ public class BundleController {
                     null, msgId));
 
             bundleRedisDao.saveBundle(bundle);
-            bundle = null;
+            bundle = new Bundle();
             commonMsgId = 0;
 
             return showBundleSelectionMenu();
@@ -157,7 +156,11 @@ public class BundleController {
 
         if (data.startsWith("DELETE_")) {
             bundleRedisDao.deleteBundle(data.split("_")[1]);
-            return showBundleSelectionMenu();
+
+            executor.editMessage(BotContentData.getEditMessage(getAdminChatId(),
+                    "Выберите связку, которую хотите редактировать.\nСвязка названа по группе назначения",
+                    keyboard.getBundles(bundleRedisDao.getAllBundles()), msgId));
+            return true;
         }
 
         if (data.contains(BundleRedisDao.KEY)) {
@@ -235,7 +238,6 @@ public class BundleController {
 
     }
 
-
     private boolean addTargetChat(Update update) {
         sourceUpdate = null;
 
@@ -259,29 +261,24 @@ public class BundleController {
 
 
     private boolean addTargetChannel(Update update) {
-        sourceUpdate = null;
+        executor.editMessage(BotContentData.getEditMessage(getAdminChatId(),
+                "Бот добавлен в целевой канал, информация записана!\nТеперь выбери язык, на который будем переводить",
+                keyboard.languages(), commonMsgId));
 
-//        System.out.println(update.getMyChatMember().getNewChatMember().getStatus());
-//        System.out.println(update.getMyChatMember().getNewChatMember().getUser().getFirstName());
-//        System.out.println("update:" + update.getMyChatMember().getChat().getType());
-//        System.out.println("update:" + update.getMyChatMember().getChat().getTitle());
-//        System.out.println("update:" + update.getMyChatMember().getChat().getId());
+
+        executor.sendMessage(BotContentData.getSendMessage(update.getMyChatMember().getChat().getId(),
+                "Канал назначения добавлен и записан!",
+                null));
+
 
         bundle.setTo(update.getMyChatMember().getChat().getId());
         bundle.setNameTo(update.getMyChatMember().getChat().getTitle());
-
         bundle.setLang("");
         bundle.setKey("");
         bundle.setFlag("");
         bundleRedisDao.saveBundle(bundle);
 
-        executor.sendMessage(BotContentData.getSendMessage(bundle.getTo(),
-                "Канал назначения добавлен и записан!",
-                null));
-
-        executor.editMessage(BotContentData.getEditMessage(getAdminChatId(),
-                "Бот добавлен в целевой канал, информация записана!\nТеперь выбери язык, на который будем переводить",
-                keyboard.languages(), commonMsgId));
+        sourceUpdate = null;
         return true;
     }
 

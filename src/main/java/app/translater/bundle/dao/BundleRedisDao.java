@@ -6,10 +6,7 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 @Service
 public class BundleRedisDao {
@@ -44,10 +41,13 @@ public class BundleRedisDao {
 
     public HashMap<String, Bundle> getAllBundles() {
         HashMap<String, Bundle> allBundles = new HashMap<>();
+
         try (Jedis jedis = jedisPool.getResource()) {
             Set<String> keys = jedis.keys(KEY + "*");
+
             for (String key : keys) {
                 Map<String, String> bundleMap = jedis.hgetAll(key);
+
                 Bundle bundle = new Bundle();
                 bundle.setNameTo(bundleMap.get("nameTo"));
                 bundle.setNameFrom(bundleMap.get("nameFrom"));
@@ -60,11 +60,12 @@ public class BundleRedisDao {
 
                 bundle.setFlag(bundleMap.get("flag"));
 
-                allBundles.put(bundle.getKey(), bundle);
+                allBundles.put(String.valueOf(bundle.getFrom()), bundle);
             }
         }
         return allBundles;
     }
+
 
     public Optional<Bundle> getBundle(String key) {
         try (Jedis jedis = jedisPool.getResource()) {

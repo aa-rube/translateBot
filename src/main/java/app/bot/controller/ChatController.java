@@ -41,6 +41,7 @@ public class ChatController extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         if (bundleController.handleUpdate(update)) return;
 
+
         if (!update.hasMessage()) return;
         forwardTranslatedMsg(update);
     }
@@ -78,8 +79,10 @@ public class ChatController extends TelegramLongPollingBot {
 
     public void forwardTranslatedMsg(Update update) {
         Long from = update.getMessage().getChat().getId();
-        Bundle bundle = dao.getBundle(BundleRedisDao.KEY.concat(String.valueOf(from))).get();
+        Optional<Bundle> bundleOpt = dao.getBundle(BundleRedisDao.KEY.concat(String.valueOf(from)));
+        if (bundleOpt.isEmpty()) return;
 
+        Bundle bundle = bundleOpt.get();
         String key = bundle.getKey();
         Long chatIdToSendMsg = bundle.getTo();
         String direction = bundle.getLang();

@@ -53,20 +53,21 @@ public class BundleKeyboard {
         return inLineKeyBoard;
     }
 
-
     public InlineKeyboardMarkup getBundles(HashMap<String, Bundle> bundles) {
         InlineKeyboardMarkup inLineKeyBoard = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> keyboardMatrix = new ArrayList<>();
 
         for (Map.Entry<String, Bundle> entry : bundles.entrySet()) {
+
+            System.out.println(entry.getValue().getNameTo());
+
             List<InlineKeyboardButton> row = new ArrayList<>();
             InlineKeyboardButton btn = new InlineKeyboardButton();
-            btn.setText(entry.getValue().getNameTo() == null
-                    ? entry.getValue().getFrom() + "-" + entry.getValue().getTo() :
-                    entry.getValue().getNameTo());
 
+            btn.setText(entry.getValue().getNameTo());
             btn.setCallbackData(BundleRedisDao.KEY + entry.getValue().getFrom());
             row.add(btn);
+
             keyboardMatrix.add(row);
         }
 
