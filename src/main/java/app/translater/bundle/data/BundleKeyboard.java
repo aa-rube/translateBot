@@ -31,19 +31,28 @@ public class BundleKeyboard {
     }
 
     public InlineKeyboardMarkup addBotToTargetChatOrChannel(String botUserName) {
-        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        InlineKeyboardMarkup inLineKeyBoard = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboardMatrix = new ArrayList<>();
 
-        InlineKeyboardButton addToChat = new InlineKeyboardButton();
-        addToChat.setText("Добавить в целевую группу");
-        addToChat.setUrl("tg://resolve?domain=".concat(botUserName).concat("&startgroup=true"));
-        markupInline.setKeyboard(List.of(List.of(addToChat)));
+        List<InlineKeyboardButton> chatRow = new ArrayList<>();
+        InlineKeyboardButton chat = new InlineKeyboardButton();
+        chat.setText("Добавить в целевую группу");
+        chat.setUrl("tg://resolve?domain=".concat(botUserName).concat("&startgroup=true"));
+        chatRow.add(chat);
 
-        InlineKeyboardButton addToChannel = new InlineKeyboardButton();
-        addToChannel.setText("Добавить в кана целевой канал");
-        addToChannel.setUrl("tg://resolve?domain=".concat(botUserName).concat("&startchannel=true"));
-        markupInline.setKeyboard(List.of(List.of(addToChannel)));
-        return markupInline;
+        List<InlineKeyboardButton> channelRow = new ArrayList<>();
+        InlineKeyboardButton channel = new InlineKeyboardButton();
+        channel.setText("Добавить в кана целевой канал");
+        channel.setUrl("tg://resolve?domain=".concat(botUserName).concat("&startchannel=true"));
+        channelRow.add(channel);
+
+        keyboardMatrix.add(chatRow);
+        keyboardMatrix.add(channelRow);
+
+        inLineKeyBoard.setKeyboard(keyboardMatrix);
+        return inLineKeyBoard;
     }
+
 
     public InlineKeyboardMarkup getBundles(HashMap<String, Bundle> bundles) {
         InlineKeyboardMarkup inLineKeyBoard = new InlineKeyboardMarkup();

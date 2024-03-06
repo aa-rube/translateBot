@@ -40,9 +40,8 @@ public class ChatController extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         if (bundleController.handleUpdate(update)) return;
+
         if (!update.hasMessage()) return;
-
-
         forwardTranslatedMsg(update);
     }
 
