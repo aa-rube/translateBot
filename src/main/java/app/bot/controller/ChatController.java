@@ -1,8 +1,9 @@
 package app.bot.controller;
 
 import app.bot.config.BotConfig;
-import app.translater.bundle.dao.BundleRedisDao;
 import app.translater.bundle.model.Bundle;
+import app.translater.bundle.model.Target;
+import app.translater.bundle.service.RedisBundleService;
 import app.translater.groupInfo.Header;
 import app.translater.bundle.BundleController;
 import app.translater.util.ConstructorGroupMediaMessage;
@@ -43,13 +44,13 @@ public class ChatController extends TelegramLongPollingBot {
 
 
         if (!update.hasMessage()) return;
-        forwardTranslatedMsg(update);
+        sender(update);
     }
 
     @Autowired
     private BundleController bundleController;
     @Autowired
-    private BundleRedisDao dao;
+    private RedisBundleService service;
     @Autowired
     private ConstructorPlainTextMsg plainTextMsg;
     @Autowired
@@ -77,17 +78,18 @@ public class ChatController extends TelegramLongPollingBot {
         idList.clear();
     }
 
-    public void forwardTranslatedMsg(Update update) {
+    private void sender(Update update) {
         Long from = update.getMessage().getChat().getId();
-        Optional<Bundle> bundleOpt = dao.getBundle(BundleRedisDao.KEY.concat(String.valueOf(from)));
-        if (bundleOpt.isEmpty()) return;
+        Bundle bundleOpt = service.getBundle(from);
+        if (bundleOpt == null) return;
 
-        Bundle bundle = bundleOpt.get();
-        String key = bundle.getKey();
-        Long chatIdToSendMsg = bundle.getTo();
-        String direction = bundle.getLang();
-        String head = bundle.getFlag().concat(Header.createHead(update));
+        for (Target target : bundleOpt.getTargetGroupList()) {
+            String head = target.getFlag().concat(Header.createHead(update));
+            forwardTranslatedMsg(update, target.getDeeplApiKey(), target.getChatId(), target.getLang(), head);
+        }
+    }
 
+    public void forwardTranslatedMsg(Update update, String key, Long chatIdToSendMsg, String direction, String head) {
         if (update.hasMessage() && update.getMessage().hasText() && update.getMessage().getEntities() == null) {
 
             sendMessage(plainTextMsg.translatePlainText(key, chatIdToSendMsg, update, direction, head));

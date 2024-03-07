@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
@@ -21,7 +22,6 @@ public class MessageExecutor {
     public void sendMessage(Object msg) {
         try {
             chat.executeAsync((SendMessage) msg);
-            System.out.println("wtf");
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -30,6 +30,14 @@ public class MessageExecutor {
     public void editMessage(Object msg) {
         try {
             chat.executeAsync((EditMessageText) msg);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void deleteMessage(Object msg) {
+        try {
+            chat.executeAsync((DeleteMessage) msg);
         } catch (Exception e) {
             e.printStackTrace();
         }
