@@ -139,7 +139,6 @@ public class BundleController {
 
         if (data.equals("CREATE")) {
             sourceUpdate = true;
-            commonMsgId = msgId;
 
             executor.editMessage(BotContentData.getEditMessage(chatId,
                     "Создание новой связки!\nДавай назначим группу/тему для новых сообщений, для перевода (ОТКУДА)",
@@ -171,7 +170,6 @@ public class BundleController {
 
             redisRepository.saveBundle(bundle);
             bundle = new Bundle();
-            commonMsgId = 0;
 
             return showBundleSelectionMenu();
         }
